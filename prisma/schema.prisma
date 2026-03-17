@@ -1,0 +1,151 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  TEACHER
+  STUDENT
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED
+}
+
+enum SessionType {
+  THEORY
+  LAB
+}
+
+model User {
+  id           String  @id @default(uuid())
+  studentId    String? @unique
+  name         String
+  email        String? @unique
+  passwordHash String?
+  role         Role    @default(STUDENT)
+  gender       String?
+  major        String?
+  adminClass   String?
+  remark       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  semesters         Semester[]        @relation("TeacherSemesters")
+  courses           Course[]          @relation("TeacherCourses")
+  enrollments       Enrollment[]
+  attendanceRecords AttendanceRecord[]
+
+  @@map("users")
+}
+
+model Semester {
+  id        String    @id @default(uuid())
+  name      String
+  startDate DateTime?
+  endDate   DateTime?
+  teacherId String
+  teacher   User      @relation("TeacherSemesters", fields: [teacherId], references: [id], onDelete: Cascade)
+  courses   Course[]
+
+  createdAt DateTime @default(now())
+
+  @@map("semesters")
+}
+
+model Course {
+  id         String   @id @default(uuid())
+  name       String
+  code       String?
+  credit     Float?
+  nature     String?
+  semesterId String
+  semester   Semester @relation(fields: [semesterId], references: [id], onDelete: Cascade)
+  teacherId  String
+  teacher    User     @relation("TeacherCourses", fields: [teacherId], references: [id], onDelete: Cascade)
+
+  teachingClasses TeachingClass[]
+  enrollments     Enrollment[]
+  sessions        Session[]
+
+  createdAt DateTime @default(now())
+
+  @@map("courses")
+}
+
+model TeachingClass {
+  id       String  @id @default(uuid())
+  name     String
+  courseId String
+  course   Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  location String?
+  schedule String?
+
+  enrollments Enrollment[]
+  sessions    Session[]
+
+  createdAt DateTime @default(now())
+
+  @@unique([courseId, name])
+  @@map("teaching_classes")
+}
+
+model Enrollment {
+  id              String        @id @default(uuid())
+  studentId       String
+  student         User          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  courseId        String
+  course          Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  teachingClassId String
+  teachingClass   TeachingClass @relation(fields: [teachingClassId], references: [id], onDelete: Cascade)
+  status          String?       @default("正常")
+
+  enrolledAt DateTime @default(now())
+
+  @@unique([studentId, teachingClassId])
+  @@map("enrollments")
+}
+
+model Session {
+  id              String        @id @default(uuid())
+  courseId        String
+  course          Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  teachingClassId String
+  teachingClass   TeachingClass @relation(fields: [teachingClassId], references: [id], onDelete: Cascade)
+  type            SessionType   @default(THEORY)
+  title           String
+  scheduledAt     DateTime
+  status          String        @default("PENDING")
+  weekNumber      Int?
+  lessonNumber    Int?
+
+  createdAt         DateTime           @default(now())
+  attendanceRecords AttendanceRecord[]
+
+  @@map("sessions")
+}
+
+model AttendanceRecord {
+  id        String           @id @default(uuid())
+  sessionId String
+  session   Session          @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  studentId String
+  student   User             @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  status    AttendanceStatus @default(ABSENT)
+  checkedAt DateTime         @default(now())
+  note      String?
+
+  @@unique([sessionId, studentId])
+  @@map("attendance_records")
+}

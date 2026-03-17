@@ -1,6 +1,5 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { signOut } from "next-auth/react";
 import StudentNav from "@/components/StudentNav";
 
 export default async function StudentLayout({ children }: { children: React.ReactNode }) {

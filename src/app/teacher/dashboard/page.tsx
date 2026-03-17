@@ -228,7 +228,7 @@ export default async function TeacherDashboard() {
           { href: "/teacher/courses", label: "导入名单", icon: "📥", desc: "批量导入学生" },
         ].map((action) => (
           <Link
-            key={action.href}
+            key={action.label}
             href={action.href}
             className="p-4 bg-slate-900/50 border border-slate-800 rounded-xl hover:bg-slate-800/50 hover:border-slate-700 transition group"
           >

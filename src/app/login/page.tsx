@@ -41,11 +41,11 @@ export default function LoginPage() {
             key={i}
             className="absolute rounded-full bg-white opacity-20"
             style={{
-              width: Math.random() * 3 + 1 + "px",
-              height: Math.random() * 3 + 1 + "px",
-              top: Math.random() * 100 + "%",
-              left: Math.random() * 100 + "%",
-              animation: `twinkle ${Math.random() * 3 + 2}s infinite`,
+              width: ((i * 13 % 30) / 10 + 1) + "px",
+              height: ((i * 13 % 30) / 10 + 1) + "px",
+              top: (i * 197 % 100) + "%",
+              left: (i * 373 % 100) + "%",
+              animation: `twinkle ${(i * 7 % 30) / 10 + 2}s infinite`,
             }}
           />
         ))}

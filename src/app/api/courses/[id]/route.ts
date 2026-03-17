@@ -12,23 +12,29 @@ export async function GET(
   }
 
   const { id } = await params;
-  const course = await prisma.course.findFirst({
-    where: { id, teacherId: session.user.id },
-    include: {
-      semester: true,
-      teachingClasses: {
-        include: {
-          enrollments: {
-            include: { student: { select: { id: true, name: true, studentId: true, adminClass: true } } },
+
+  try {
+    const course = await prisma.course.findFirst({
+      where: { id, teacherId: session.user.id },
+      include: {
+        semester: true,
+        teachingClasses: {
+          include: {
+            enrollments: {
+              include: { student: { select: { id: true, name: true, studentId: true, adminClass: true } } },
+            },
+            sessions: { orderBy: { scheduledAt: "asc" } },
           },
-          sessions: { orderBy: { scheduledAt: "asc" } },
         },
       },
-    },
-  });
+    });
 
-  if (!course) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json(course);
+    if (!course) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return NextResponse.json(course);
+  } catch (e) {
+    console.error("Get course error:", e);
+    return NextResponse.json({ error: "获取课程失败" }, { status: 500 });
+  }
 }
 
 export async function PATCH(
@@ -43,20 +49,25 @@ export async function PATCH(
   const { id } = await params;
   const body = await req.json();
 
-  const course = await prisma.course.findFirst({ where: { id, teacherId: session.user.id } });
-  if (!course) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  try {
+    const course = await prisma.course.findFirst({ where: { id, teacherId: session.user.id } });
+    if (!course) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const updated = await prisma.course.update({
-    where: { id },
-    data: {
-      name: body.name,
-      code: body.code,
-      credit: body.credit,
-      nature: body.nature,
-    },
-  });
+    const updated = await prisma.course.update({
+      where: { id },
+      data: {
+        name: body.name,
+        code: body.code,
+        credit: body.credit,
+        nature: body.nature,
+      },
+    });
 
-  return NextResponse.json(updated);
+    return NextResponse.json(updated);
+  } catch (e) {
+    console.error("Update course error:", e);
+    return NextResponse.json({ error: "更新课程失败" }, { status: 500 });
+  }
 }
 
 export async function DELETE(
@@ -69,9 +80,19 @@ export async function DELETE(
   }
 
   const { id } = await params;
-  const course = await prisma.course.findFirst({ where: { id, teacherId: session.user.id } });
-  if (!course) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  await prisma.course.delete({ where: { id } });
-  return NextResponse.json({ success: true });
+  try {
+    const deleted = await prisma.course.deleteMany({
+      where: { id, teacherId: session.user.id },
+    });
+
+    if (deleted.count === 0) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (e) {
+    console.error("Delete course error:", e);
+    return NextResponse.json({ error: "删除失败" }, { status: 500 });
+  }
 }

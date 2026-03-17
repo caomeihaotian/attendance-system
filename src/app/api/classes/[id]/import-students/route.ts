@@ -12,6 +12,8 @@ interface StudentRow {
   remark?: string;
 }
 
+const BATCH_SIZE = 30;
+
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -23,7 +25,6 @@ export async function POST(
 
   const { id } = await params;
 
-  // Verify class belongs to teacher
   const teachingClass = await prisma.teachingClass.findFirst({
     where: { id, course: { teacherId: session.user.id } },
     include: { course: true },
@@ -37,81 +38,116 @@ export async function POST(
     return NextResponse.json({ error: "No students provided" }, { status: 400 });
   }
 
+  const validStudents = students.filter((s) => s.studentId && s.name);
+  const errors: string[] = [];
+  const skipped = students.length - validStudents.length;
+  if (skipped > 0) {
+    errors.push(`跳过 ${skipped} 条学号或姓名为空的记录`);
+  }
+
+  // Batch-fetch all existing users in ONE query instead of 150 individual queries
+  const existingUsers = await prisma.user.findMany({
+    where: { studentId: { in: validStudents.map((s) => s.studentId) } },
+  });
+  const existingUserMap = new Map(
+    existingUsers.map((u) => [u.studentId!, u])
+  );
+
+  // Pre-compute bcrypt hashes ONLY for new students (skip for existing ones)
+  const hashMap = new Map<string, string>();
+  for (const s of validStudents) {
+    if (!existingUserMap.has(s.studentId)) {
+      hashMap.set(
+        s.studentId,
+        await bcrypt.hash(s.studentId.slice(-6), 10)
+      );
+    }
+  }
+
   let created = 0;
   let updated = 0;
   let retakes = 0;
-  const errors: string[] = [];
 
-  for (const row of students) {
-    if (!row.studentId || !row.name) {
-      errors.push(`跳过：学号或姓名为空`);
-      continue;
-    }
+  // Process in batches with transactions to avoid connection drops
+  for (let i = 0; i < validStudents.length; i += BATCH_SIZE) {
+    const batch = validStudents.slice(i, i + BATCH_SIZE);
 
     try {
-      const isRetake = row.remark?.includes("重修") ?? false;
-      const defaultPassword = row.studentId.slice(-6);
-      const passwordHash = await bcrypt.hash(defaultPassword, 10);
+      const result = await prisma.$transaction(
+        async (tx) => {
+          let bCreated = 0;
+          let bUpdated = 0;
+          let bRetakes = 0;
 
-      // Upsert user
-      const existingUser = await prisma.user.findUnique({
-        where: { studentId: row.studentId },
-      });
+          for (const row of batch) {
+            const isRetake = row.remark?.includes("重修") ?? false;
+            const existing = existingUserMap.get(row.studentId);
+            let userId: string;
 
-      let userId: string;
+            if (existing) {
+              await tx.user.update({
+                where: { studentId: row.studentId },
+                data: {
+                  name: row.name,
+                  gender: row.gender,
+                  major: row.major,
+                  adminClass: row.adminClass,
+                  remark: row.remark,
+                },
+              });
+              userId = existing.id;
+              bUpdated++;
+            } else {
+              const newUser = await tx.user.create({
+                data: {
+                  studentId: row.studentId,
+                  name: row.name,
+                  role: "STUDENT",
+                  passwordHash: hashMap.get(row.studentId)!,
+                  gender: row.gender,
+                  major: row.major,
+                  adminClass: row.adminClass,
+                  remark: row.remark,
+                },
+              });
+              userId = newUser.id;
+              existingUserMap.set(row.studentId, { ...newUser, studentId: row.studentId });
+              bCreated++;
+            }
 
-      if (existingUser) {
-        await prisma.user.update({
-          where: { studentId: row.studentId },
-          data: {
-            name: row.name,
-            gender: row.gender,
-            major: row.major,
-            adminClass: row.adminClass,
-            remark: row.remark,
-          },
-        });
-        userId = existingUser.id;
-        updated++;
-      } else {
-        const newUser = await prisma.user.create({
-          data: {
-            studentId: row.studentId,
-            name: row.name,
-            role: "STUDENT",
-            passwordHash,
-            gender: row.gender,
-            major: row.major,
-            adminClass: row.adminClass,
-            remark: row.remark,
-          },
-        });
-        userId = newUser.id;
-        created++;
-      }
+            if (isRetake) bRetakes++;
 
-      if (isRetake) retakes++;
+            await tx.enrollment.upsert({
+              where: {
+                studentId_teachingClassId: {
+                  studentId: userId,
+                  teachingClassId: id,
+                },
+              },
+              create: {
+                studentId: userId,
+                courseId: teachingClass.courseId,
+                teachingClassId: id,
+                status: isRetake ? "重修" : "正常",
+              },
+              update: {
+                status: isRetake ? "重修" : "正常",
+              },
+            });
+          }
 
-      // Upsert enrollment
-      await prisma.enrollment.upsert({
-        where: {
-          studentId_teachingClassId: {
-            studentId: userId,
-            teachingClassId: id,
-          },
+          return { created: bCreated, updated: bUpdated, retakes: bRetakes };
         },
-        create: {
-          studentId: userId,
-          courseId: teachingClass.courseId,
-          teachingClassId: id,
-          status: isRetake ? "重修" : "正常",
-        },
-        update: {
-          status: isRetake ? "重修" : "正常",
-        },
-      });
+        { timeout: 60000 }
+      );
+
+      created += result.created;
+      updated += result.updated;
+      retakes += result.retakes;
     } catch (err) {
-      errors.push(`${row.studentId} ${row.name}: ${String(err)}`);
+      const start = i + 1;
+      const end = Math.min(i + BATCH_SIZE, validStudents.length);
+      errors.push(`第 ${start}-${end} 条记录导入失败: ${String(err)}`);
     }
   }
 
@@ -121,6 +157,6 @@ export async function POST(
     updated,
     retakes,
     total: students.length,
-    errors: errors.slice(0, 10),
+    errors: errors.slice(0, 20),
   });
 }

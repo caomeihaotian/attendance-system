@@ -39,6 +39,18 @@ function createPrismaClient() {
   }) as unknown as PrismaClient;
 }
 
-export const prisma = globalForPrisma.prisma ?? createPrismaClient();
+function getPrismaClient(): PrismaClient {
+  if (!globalForPrisma.prisma) {
+    globalForPrisma.prisma = createPrismaClient();
+  }
+  return globalForPrisma.prisma;
+}
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+// Use getter function to defer Prisma client initialization
+// This prevents connection attempts during build time
+export const prisma = new Proxy({} as PrismaClient, {
+  get(target, prop) {
+    const client = getPrismaClient();
+    return client[prop as keyof PrismaClient];
+  },
+});

@@ -2,10 +2,10 @@
   "buildCommand": "prisma generate && next build",
   "installCommand": "pnpm install",
   "framework": "nextjs",
-  "env": {
-    "DATABASE_URL": "@database_url",
-    "DATABASE_URL_UNPOOLED": "@database_url_unpooled",
-    "NEXTAUTH_SECRET": "@nextauth_secret",
-    "NEXTAUTH_URL": "@nextauth_url"
+  "build": {
+    "env": {
+      "DATABASE_URL": "@database_url",
+      "DATABASE_URL_UNPOOLED": "@database_url_unpooled"
+    }
   }
 }

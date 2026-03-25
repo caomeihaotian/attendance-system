@@ -1,9 +1,10 @@
 {
-  "buildCommand": "prisma generate && next build",
+  "buildCommand": "prisma generate && next build --webpack",
   "installCommand": "pnpm install",
   "framework": "nextjs",
   "build": {
     "env": {
+      "NODE_OPTIONS": "--max-old-space-size=4096",
       "DATABASE_URL": "@database_url",
       "DATABASE_URL_UNPOOLED": "@database_url_unpooled"
     }

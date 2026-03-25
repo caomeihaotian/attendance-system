@@ -1,10 +1,17 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  turbopack: {},
-  serverExternalPackages: ["@prisma/client", "bcryptjs", "three", "@react-three/fiber", "@react-three/drei", "xlsx"],
-  experimental: {
-    cpus: 1,
+  serverExternalPackages: ["@prisma/client", "bcryptjs"],
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+      };
+    }
+    return config;
   },
 };
 

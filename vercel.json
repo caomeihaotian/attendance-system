@@ -1,9 +1,9 @@
 {
-  "buildCommand": "export NODE_OPTIONS='--max-old-space-size=4096' && prisma generate && next build --turbopack",
   "installCommand": "pnpm install",
   "framework": "nextjs",
   "build": {
     "env": {
+      "NODE_OPTIONS": "--max-old-space-size=3072",
       "DATABASE_URL": "@database_url",
       "DATABASE_URL_UNPOOLED": "@database_url_unpooled"
     }

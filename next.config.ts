@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["@prisma/client", "bcryptjs"],
+  turbopack: {},
+  serverExternalPackages: ["@prisma/client", "bcryptjs", "three"],
 };
 
 export default nextConfig;

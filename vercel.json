@@ -3,7 +3,6 @@
   "framework": "nextjs",
   "build": {
     "env": {
-      "NODE_OPTIONS": "--max-old-space-size=3072",
       "DATABASE_URL": "@database_url",
       "DATABASE_URL_UNPOOLED": "@database_url_unpooled"
     }

@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: '请输入有效的手机号码',
-          details: validationResult.error.errors
+          details: validationResult.error.issues
         },
         { status: 400 }
       );

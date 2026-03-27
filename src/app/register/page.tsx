@@ -3,10 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { fetchWithCsrf } from "@/lib/csrf";
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -15,9 +16,8 @@ export default function RegisterPage() {
     setLoading(true);
     setError("");
 
-    const res = await fetch("/api/auth/register", {
+    const res = await fetchWithCsrf("/api/auth/register", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),
     });
 
@@ -61,6 +61,20 @@ export default function RegisterPage() {
                 placeholder="请输入邮箱"
                 className="w-full px-4 py-3 bg-slate-900/60 border border-slate-600/50 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition"
               />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">手机号</label>
+              <input
+                type="tel"
+                value={form.phone}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, "").slice(0, 11);
+                  setForm({ ...form, phone: value });
+                }}
+                placeholder="请输入手机号（可选）"
+                className="w-full px-4 py-3 bg-slate-900/60 border border-slate-600/50 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition"
+              />
+              <p className="mt-1 text-xs text-slate-500">填写手机号后可通过手机号找回密码</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">密码</label>

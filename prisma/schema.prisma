@@ -28,11 +28,17 @@ enum SessionType {
   LAB
 }
 
+enum VerificationType {
+  EMAIL_RESET
+  PHONE_RESET
+}
+
 model User {
   id           String  @id @default(uuid())
   studentId    String? @unique
   name         String
   email        String? @unique
+  phone        String? @unique
   passwordHash String?
   role         Role    @default(STUDENT)
   gender       String?
@@ -43,10 +49,12 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  semesters         Semester[]        @relation("TeacherSemesters")
-  courses           Course[]          @relation("TeacherCourses")
-  enrollments       Enrollment[]
-  attendanceRecords AttendanceRecord[]
+  semesters             Semester[]                @relation("TeacherSemesters")
+  courses               Course[]                  @relation("TeacherCourses")
+  enrollments           Enrollment[]
+  attendanceRecords     AttendanceRecord[]
+  emailVerificationCodes EmailVerificationCode[]
+  phoneVerificationCodes PhoneVerificationCode[]
 
   @@map("users")
 }
@@ -149,4 +157,34 @@ model AttendanceRecord {
 
   @@unique([sessionId, studentId])
   @@map("attendance_records")
+}
+
+model EmailVerificationCode {
+  id        String          @id @default(uuid())
+  userId    String?
+  user      User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email     String
+  code      String
+  type      VerificationType
+  expiresAt DateTime
+  used      Boolean         @default(false)
+  createdAt DateTime        @default(now())
+
+  @@index([email, code])
+  @@map("email_verification_codes")
+}
+
+model PhoneVerificationCode {
+  id        String          @id @default(uuid())
+  userId    String?
+  user      User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phone     String
+  code      String
+  type      VerificationType
+  expiresAt DateTime
+  used      Boolean         @default(false)
+  createdAt DateTime        @default(now())
+
+  @@index([phone, code])
+  @@map("phone_verification_codes")
 }

@@ -1,10 +1,4 @@
 {
   "installCommand": "pnpm install",
-  "framework": "nextjs",
-  "build": {
-    "env": {
-      "DATABASE_URL": "@database_url",
-      "DATABASE_URL_UNPOOLED": "@database_url_unpooled"
-    }
-  }
+  "framework": "nextjs"
 }

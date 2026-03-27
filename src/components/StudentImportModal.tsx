@@ -7,6 +7,7 @@ import Papa from "papaparse";
 interface StudentRow {
   studentId: string;
   name: string;
+  phone?: string;
   gender?: string;
   major?: string;
   adminClass?: string;
@@ -37,12 +38,23 @@ function parseRow(row: Record<string, string>): StudentRow | null {
 
   const studentId = find(["学号", "studentId", "student_id"]);
   const name = find(["姓名", "name", "学生姓名"]);
+  const phoneRaw = find(["手机号", "手机", "电话", "phone", "mobile", "联系电话"]);
 
   if (!studentId || !name) return null;
+
+  // Validate phone number if provided
+  let phone: string | undefined;
+  if (phoneRaw) {
+    const cleaned = phoneRaw.replace(/\D/g, "");
+    if (/^1[3-9]\d{9}$/.test(cleaned)) {
+      phone = cleaned;
+    }
+  }
 
   return {
     studentId,
     name,
+    phone,
     gender: find(["性别", "gender"]) || undefined,
     major: find(["专业", "major"]) || undefined,
     adminClass: find(["班级", "行政班", "adminClass", "class"]) || undefined,
@@ -143,7 +155,7 @@ export default function StudentImportModal({ classId, onClose, onSuccess }: Prop
               <input type="file" accept=".xlsx,.xls,.csv" onChange={handleFile} className="hidden" />
             </label>
             <p className="text-xs text-slate-500 mt-1.5">
-              必须包含"学号"和"姓名"列，支持性别、专业、班级、备注列
+              必须包含"学号"和"姓名"列，支持性别、专业、班级、手机号、备注列
             </p>
           </div>
 
@@ -157,7 +169,7 @@ export default function StudentImportModal({ classId, onClose, onSuccess }: Prop
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="bg-slate-800">
-                      {["学号", "姓名", "性别", "专业", "班级", "备注"].map((h) => (
+                      {["学号", "姓名", "手机号", "性别", "专业", "班级", "备注"].map((h) => (
                         <th key={h} className="px-3 py-2 text-left text-slate-400 font-medium">{h}</th>
                       ))}
                     </tr>
@@ -167,6 +179,7 @@ export default function StudentImportModal({ classId, onClose, onSuccess }: Prop
                       <tr key={i} className="border-t border-slate-800 hover:bg-slate-800/50">
                         <td className="px-3 py-2 text-slate-300">{row.studentId}</td>
                         <td className="px-3 py-2 text-white font-medium">{row.name}</td>
+                        <td className="px-3 py-2 text-slate-400">{row.phone || "-"}</td>
                         <td className="px-3 py-2 text-slate-400">{row.gender}</td>
                         <td className="px-3 py-2 text-slate-400">{row.major}</td>
                         <td className="px-3 py-2 text-slate-400">{row.adminClass}</td>

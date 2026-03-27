@@ -94,6 +94,11 @@ export default function LoginPage() {
                 className="w-full px-4 py-3 bg-slate-900/60 border border-slate-600/50 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition"
               />
               <p className="mt-1 text-xs text-slate-500">学生默认密码为学号后6位</p>
+              <div className="mt-2 text-right">
+                <Link href="/forgot-password" className="text-sm text-purple-400 hover:text-purple-300 transition">
+                  忘记密码？
+                </Link>
+              </div>
             </div>
 
             {error && (
